@@ -135,16 +135,7 @@ station_ave <- met[, .(temp = mean(temp, na.rm=T),
 medians <- station_ave[, .(temp_50 = quantile(temp, probs=.5, na.rm=T),
                            wind_sp_50 = quantile(wind.sp, probs=.5, na.rm=T),
                            atm_press_50 = quantile(atm.press, probs=.5, na.rm=T))]
-medians
-```
 
-Knit the document, commit your changes, and save it on GitHub. Don't forget to add `README.md` to the tree, the first time you render it.
-
-## Question 2: Representative station per state
-
-Just like the previous question, you are asked to identify what is the most representative, the median, station per state. This time, instead of looking at one variable at a time, look at the euclidean distance. If multiple stations show in the median, select the one located at the lowest latitude.
-
-```{r}
 # median temp station
 station_ave[, temp_dist := abs(temp - medians$temp_50)]
 median_temp_station <- station_ave[order(temp_dist)][1]
@@ -157,6 +148,22 @@ median_wind_sp_station
 station_ave[, atm_press_dist := abs(atm.press - medians$atm_press_50)]
 median_atm_press_station <- station_ave[order(atm_press_dist)][1]
 median_atm_press_station
+
+```
+
+These 3 stations don't coincide as they are in different states.
+
+Knit the document, commit your changes, and save it on GitHub. Don't forget to add `README.md` to the tree, the first time you render it.
+
+## Question 2: Representative station per state
+
+Just like the previous question, you are asked to identify what is the most representative, the median, station per state. This time, instead of looking at one variable at a time, look at the euclidean distance. If multiple stations show in the median, select the one located at the lowest latitude.
+
+```{r}
+# find euclidean distance
+station_ave[, var_eudist := sqrt((temp-medians$temp_50)^2 + (wind.sp - medians$wind_sp_50)^2 + (atm.press - medians$atm_press_50)^2)]
+median_station <- station_ave[, .SD[which.min(var_eudist)], by=STATE]
+median_station
 ```
 
 Knit the doc and save it on GitHub.
@@ -198,7 +205,10 @@ Start by computing the states' average temperature. Use that measurement to clas
 -   High: temp \>= 25
 
 ```{r}
+met[, state_temp := mean(temp, na.rm=T), by=STATE]
 
+met[, temp_cat := fifelse(state_temp < 20, "low-temp",
+                          fifelse(state_temp < 25, "mid-temp", "high-temp"))]
 ```
 
 Once you are done with that, you can compute the following:
@@ -212,6 +222,19 @@ Once you are done with that, you can compute the following:
 For each of the temperature levels described before.
 
 ```{r}
+#table(met$temp_cat, useNA = "always")
+
+tab <- met[, .(
+  N_entries = .N,
+  N_entries_na = sum(is.na(temp_cat)),
+  N_stations = length(unique(USAFID)),
+  N_states = length(unique(STATE)),
+  mean_temp = mean(temp, na.rm=T), 
+  mean_wind.sp = mean(wind.sp, na.rm=T),
+  mean_atm.press = mean(atm.press, na.rm=T)
+), by = temp_cat]
+
+knitr::kable(tab, caption = "A summary table categorized by average temp level")
 
 ```
 
@@ -226,13 +249,38 @@ Let's practice running regression models with smooth functions on X. We need the
 -   fit both a linear model and a spline model (use `gam()` with a cubic regression spline on wind speed). Summarize and plot the results from the models and interpret which model is the best fit and why.
 
 ```{r}
+library(ggplot2)
+library(tidyverse)
 
+station_ave[, temp_50 := quantile(temp, probs=.5, na.rm=T), by=STATE]
+station_ave[, wind_sp_50 := quantile(wind.sp, probs=.5, na.rm=T), by=STATE]
+
+ggplot(station_ave, aes(x=wind_sp_50, y=temp_50))+
+  geom_point()+
+  geom_smooth(method="lm")+
+  geom_smooth(method="gam", col=2)
 ```
+```{r}
+library(mgcv)
+
+lm_mod <- lm(temp_50 ~ wind_sp_50, data=station_ave)
+summary(lm_mod)
+plot(lm_mod)
+```
+
+```{r}
+gam_mod <- gam(temp_50 ~ s(wind_sp_50, bs="cr", k=20), data=station_ave)
+summary(gam_mod)
+plot(gam_mod)
+```
+
+
+- There is no significant linear relationship between temperature and wind speed. Therefore a spline model is the best fit.
 
 # Delivarables
 
 -   Answer questions 1-5
 
--   Paste the link to the github repo you created here
+-   Paste the link to the github repo you created here: https://github.com/Helenlxy/JSC370-labs
 
 -   Submit pdf or html output to Quercus
