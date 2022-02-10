@@ -124,6 +124,20 @@ met <- merge(x = met, y = stations,
              all.x = T, all.y = F, by.x = "USAFID", by.y = "USAF")
 ```
 
+```{r}
+station_ave <- met[, .(temp = mean(temp, na.rm=T),
+                       wind.sp = mean(wind.sp, na.rm=T),
+                       atm.press = mean(atm.press, na.rm=T)),
+                   by = .(USAFID, STATE)]
+```
+
+```{r}
+medians <- station_ave[, .(temp_50 = quantile(temp, probs=.5, na.rm=T),
+                           wind_sp_50 = quantile(wind.sp, probs=.5, na.rm=T),
+                           atm_press_50 = quantile(atm.press, probs=.5, na.rm=T))]
+medians
+```
+
 Knit the document, commit your changes, and save it on GitHub. Don't forget to add `README.md` to the tree, the first time you render it.
 
 ## Question 2: Representative station per state
@@ -131,7 +145,18 @@ Knit the document, commit your changes, and save it on GitHub. Don't forget to a
 Just like the previous question, you are asked to identify what is the most representative, the median, station per state. This time, instead of looking at one variable at a time, look at the euclidean distance. If multiple stations show in the median, select the one located at the lowest latitude.
 
 ```{r}
-
+# median temp station
+station_ave[, temp_dist := abs(temp - medians$temp_50)]
+median_temp_station <- station_ave[order(temp_dist)][1]
+median_temp_station
+# median wind.sp station
+station_ave[, wind_sp_dist := abs(wind.sp - medians$wind_sp_50)]
+median_wind_sp_station <- station_ave[order(wind_sp_dist)][1]
+median_wind_sp_station
+# median atm.press station
+station_ave[, atm_press_dist := abs(atm.press - medians$atm_press_50)]
+median_atm_press_station <- station_ave[order(atm_press_dist)][1]
+median_atm_press_station
 ```
 
 Knit the doc and save it on GitHub.

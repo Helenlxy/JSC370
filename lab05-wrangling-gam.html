@@ -270,11 +270,41 @@ stations &lt;- stations[n == 1,][, n := NULL]</code></pre>
 <p>Across all weather stations, what is the median station in terms of temperature, wind speed, and atmospheric pressure? Look for the three weather stations that best represent continental US using the <code>quantile()</code> function. Do these three coincide?</p>
 <pre class="r"><code>met &lt;- merge(x = met, y = stations, 
              all.x = T, all.y = F, by.x = &quot;USAFID&quot;, by.y = &quot;USAF&quot;)</code></pre>
+<pre class="r"><code>station_ave &lt;- met[, .(temp = mean(temp, na.rm=T),
+                       wind.sp = mean(wind.sp, na.rm=T),
+                       atm.press = mean(atm.press, na.rm=T)),
+                   by = .(USAFID, STATE)]</code></pre>
+<pre class="r"><code>medians &lt;- station_ave[, .(temp_50 = quantile(temp, probs=.5, na.rm=T),
+                           wind_sp_50 = quantile(wind.sp, probs=.5, na.rm=T),
+                           atm_press_50 = quantile(atm.press, probs=.5, na.rm=T))]
+medians</code></pre>
+<pre><code>##     temp_50 wind_sp_50 atm_press_50
+## 1: 23.68406   2.461838     1014.691</code></pre>
 <p>Knit the document, commit your changes, and save it on GitHub. Don’t forget to add <code>README.md</code> to the tree, the first time you render it.</p>
 </div>
 <div id="question-2-representative-station-per-state" class="section level2">
 <h2>Question 2: Representative station per state</h2>
 <p>Just like the previous question, you are asked to identify what is the most representative, the median, station per state. This time, instead of looking at one variable at a time, look at the euclidean distance. If multiple stations show in the median, select the one located at the lowest latitude.</p>
+<pre class="r"><code># median temp station
+station_ave[, temp_dist := abs(temp - medians$temp_50)]
+median_temp_station &lt;- station_ave[order(temp_dist)][1]
+median_temp_station</code></pre>
+<pre><code>##    USAFID STATE     temp  wind.sp atm.press   temp_dist
+## 1: 720458    KY 23.68173 1.209682       NaN 0.002328907</code></pre>
+<pre class="r"><code># median wind.sp station
+station_ave[, wind_sp_dist := abs(wind.sp - medians$wind_sp_50)]
+median_wind_sp_station &lt;- station_ave[order(wind_sp_dist)][1]
+median_wind_sp_station</code></pre>
+<pre><code>##    USAFID STATE     temp  wind.sp atm.press temp_dist wind_sp_dist
+## 1: 720929    WI 17.43278 2.461838       NaN  6.251284            0</code></pre>
+<pre class="r"><code># median atm.press station
+station_ave[, atm_press_dist := abs(atm.press - medians$atm_press_50)]
+median_atm_press_station &lt;- station_ave[order(atm_press_dist)][1]
+median_atm_press_station</code></pre>
+<pre><code>##    USAFID STATE     temp  wind.sp atm.press temp_dist wind_sp_dist
+## 1: 722238    AL 26.13978 1.472656  1014.691  2.455719    0.9891817
+##    atm_press_dist
+## 1:   0.0005376377</code></pre>
 <p>Knit the doc and save it on GitHub.</p>
 </div>
 <div id="question-3-in-the-middle" class="section level2">
