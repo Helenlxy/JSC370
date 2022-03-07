@@ -1,0 +1,180 @@
+---
+title: "Midterm Project - COVID-19 Data Analysis"
+author: "Xinyi Liu"
+date: "`r date()`"
+output:
+  #pdf_document: default
+  html_document: default
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r, echo=FALSE, message=FALSE}
+library(data.table)
+library(dtplyr)
+library(dplyr)
+library(ggplot2)
+#library(mgcv)
+library(knitr)
+#library(magrittr)
+library(lubridate)
+```
+# Introduction
+
+Since 2019, COVID-19 has been a pandemic throughout the world. Many analysis have been performed on all kinds of dataset for COVID-19 in order to find ways to fight with it. For this project, I will mainly analyze COVID-19 data from [the COVID tracking project](https://covidtracking.com/). The COVID tracking project collected state-level metrics for COVID-19 cases, tests, hospitalizations, and outcomes from 2020/01/13 to 2021/03/07. The primary question I will investigate with these data is whether the number and the trend of confirmed cases differs from state to state, and what might be the reason. 
+
+
+# Methods
+
+### COVID-19 Data
+
+The COVID tracking project provides data API to download data. There are 20780 state-level COVID-19 observations of 56 variables, including number of positive cases, tests, deaths and individuals who are currently hospitalized with COVID-19 etc. 
+
+I will focus on the `positiveIncrease` and `totalTestResultsIncrease` variable, which is the daily increase of confirmed cases and PCR tests calculated based on the previous day’s value. Following the suggestions in [this article](https://covidtracking.com/analysis-updates/how-day-of-week-effects-impact-covid-19-data), I will use the 7-day average to show the general trends of data over a period of time due to the complexities of state reporting schedules and day-of-week effects. 
+
+Besides that, consider that different state has different population which may affect the number of positive cases, I will create a variable called `positiveIncreaseRate` which is calculated by dividing the `positiveIncrease` by the `totalTestResultsIncrease` (the rate will be 0 if `totalTestResultsIncrease` itself is 0) to calculate the daily confirmed case increase rate at state-level and use the rate to reflect the severity of COVID-19 for each state. 
+
+To ensure the collected data is accurate and stabilized, I will only analyse records in 2021 as the data collection at the beginning of the pandemic may contain many errors.
+
+```{r, echo=FALSE}
+covid_data <- data.table::fread("https://api.covidtracking.com/v1/states/daily.csv")
+covid_data <- covid_data %>%
+  subset(date >= 20210103 & date <= 20210306) #Choose these two dates as they are the beginning and the end of two weeks
+covid_data <- covid_data[, .(positiveIncrease, totalTestResultsIncrease, date, state)]
+# Coerce to Date class
+covid_data[, Date := as.Date(x=as.character(date), format='%Y%m%d',origin = lubridate::origin)]
+
+# Extract day of the week (Saturday = 6)
+covid_data[, Week_Day := as.numeric(format(covid_data$Date, format='%w'))]
+
+# Adjust end-of-week date (first saturday from the original Date)
+covid_data[, End_of_Week := covid_data$Date + (6 - covid_data$Week_Day)]
+
+# Aggregate over week and climate division
+covid_data <- covid_data[, .(positiveIncrease = mean(positiveIncrease),
+                       totalTestResultsIncrease = mean(totalTestResultsIncrease)),
+                   by = .(state, End_of_Week)]
+
+covid_data[, positiveIncreaseRate := ifelse(!totalTestResultsIncrease, 0, positiveIncrease / totalTestResultsIncrease)]
+```
+```{r, echo=FALSE}
+knitr::kable(summary(covid_data), caption = "A summary table for COVID-19 data")
+```
+
+After cleaning and wrangling the COVID-19 data, there are 504 records with 5 variables remaining in our data set. The mean national weekly increase of confirmed cases is 2377, the mean national weekly increase of PCR tests is 29741 and the mean national weekly increase rate of positive cases is 12% from 2021-01-03 to 2021-03-06.
+
+### Vaccination Data
+
+Besides COVID-19 cases data, I also want to see if the difference between states is associated with vaccination. Therefore, I will use the state-level COVID-19 Vaccinations data in the United States from [Centers for Disease Contol and Prevention](https://data.cdc.gov/Vaccinations/COVID-19-Vaccinations-in-the-United-States-Jurisdi/unsk-b7fc). CDC also provides data API so that I can acquire vaccination data on 2021-01-03 which is the beginning date in our COVID-19 data records. I will focus on the `Administered` variable which is the total number of administered vaccines based on state where administered and the `Admin_Per_100K` variable which is the total number of doses administered per 100,000 census population based on the jurisdiction where recipient lives.
+
+```{r, echo=FALSE}
+vacc_data <- data.table::fread("https://data.cdc.gov/resource/unsk-b7fc.csv?date=2021-01-03T00:00:00.000")
+vacc_data <- vacc_data[, .(location, administered, admin_per_100k)]
+knitr::kable(summary(vacc_data), caption = "A summary table for vaccination data")
+```
+
+The mean number of administered vaccines in U.S. is 148114 and the mean number of doses administered per 100,000 census population in U.S. is 1404 on 2021-01-03. 
+
+### State Data
+
+It's noticeable that there are 65 locations in the vaccination data while there are only 48 contiguous united states. This is because the `location` variable from CDC contains state, territory and federal entity. To keep only the contiguous united states, I will use a [dataset](https://developers.google.com/public-data/docs/canonical/states_csv) that is used in Google DSPL. It also has the latitude and longitude of the states which helps us draw maps in the following analysis.
+
+```{r, echo=FALSE}
+library(rvest)
+doc <- read_html("https://developers.google.com/public-data/docs/canonical/states_csv")
+states <- doc %>% html_table(fill=TRUE)
+states <- states[[1]]
+
+non_continuous <- c("AK", "HI", "PR", "DC")
+
+states <- subset(states, !(state %in% non_continuous))
+
+data.frame(variable = names(states),
+           type = sapply(states, typeof),
+           first_values = sapply(states, function(x) paste0(head(x),  collapse = ", ")),
+           row.names = NULL) %>% 
+  kable(caption = "A variable table for the state dataset")
+```
+Our state dataset has 4 variables, including the acronym and the full name of the state, as well as the latitude and longitude.
+
+### Merge Dataset
+
+After acquiring, cleaning and wrangling the three data sets, I will merge them together into one data set for further investigation.
+
+```{r, echo=FALSE}
+
+merged_data <- merge(covid_data, vacc_data, by.x="state", by.y = "location")
+merged_data <- merge(merged_data, states, by="state")
+
+knitr::kable(summary(merged_data), caption = "A summary table for merged dataset")
+
+```
+Now the dataset for analysis contains 432 records with 10 variables.
+
+### Tools uses for data exploration
+
+The COVID-19 and vaccination datasets were imported using `data.table` while the state dataset was scraped from the website using `rvest`. Three datasets were merged using `dplyr`, I processed the date variables and created a new date variable `End_of_Week` with the `lubridate` package. All tables were formatted using `knitr` and all figures were created using `ggplot2` except the map figure which was created using `leaflet`.
+
+# Preliminary Results
+
+```{r}
+
+
+tab <- merged_data[, .(
+  mean_positiveIncreaseRate = mean(positiveIncreaseRate),
+  admin_per_100k = unique(admin_per_100k),
+  administered = unique(administered),
+  lat = unique(latitude),
+  lon = unique(longitude),
+  name = unique(name)
+), by = state]
+
+tab <- tab[order(mean_positiveIncreaseRate)]
+
+tab_top10 <- head(tab, n = 8)
+
+tab_tail10 <- tail(tab, n = 8)
+
+knitr::kable(tab_top10, caption = "A summary table categorized by state, containing 10 states that has the minimum mean positive increase rate")
+
+knitr::kable(tab_tail10, caption = "A summary table categorized by state, containing 10 states that has the maximum mean positive increase rate")
+```
+
+
+```{r, echo=FALSE}
+library(leaflet)
+
+vacc_pal <- colorNumeric(c('blue', 'purple', 'red'), domain=tab$admin_per_100k, na.color=NA)
+
+addLegendCustom <- function(map, colors, labels, sizes, opacity = 0.5, title){
+  colorAdditions <- paste0(colors, "; border-radius: 50%; width:", sizes, "px; height:", sizes, "px")
+  labelAdditions <- paste0("<div style='display: inline-block;height: ", 
+                           sizes, "px;margin-top: 4px;line-height: ", sizes, "px;'>", 
+                           labels, "</div>")
+
+  return(addLegend(map, colors = colorAdditions, labels = labelAdditions, opacity = opacity, title=title))
+}
+
+tab %>%
+  leaflet() %>%
+  addProviderTiles('OpenStreetMap') %>%
+  addCircles(lat=~lat, lng=~lon, color=~vacc_pal(admin_per_100k), label=~paste(name, admin_per_100k), opacity = 1, fillOpacity = 1, radius = ~mean_positiveIncreaseRate*500000) %>%
+  addLegend('bottomleft', pal = vacc_pal, values = merged_data$admin_per_100k, title="doses administered per 100k", opacity = 1) %>%
+  addLegendCustom(colors = "red", labels = c("5%", "10%", "20%", "30%"), sizes = c(0.05*100, 0.1*100, 0.2*100, 0.3*100), title="positive increase rate")
+```
+
+```{r, echo=FALSE, message=FALSE}
+test <- subset(vacc_data, location %in% states$state)
+
+test <- merge(head(arrange(test,desc(admin_per_100k)), n = 3), tail(arrange(test,desc(admin_per_100k)), n = 3), all=TRUE)
+test_data <- subset(covid_data, state %in% test$location)
+
+ggplot(data=test_data, mapping = aes(x = End_of_Week, y = positiveIncreaseRate, color=state), title="asd") + 
+  geom_point() +
+  geom_jitter() + 
+  stat_smooth() + 
+  facet_wrap(~ state) +
+  ggtitle("Relationship between BMI and FEV by town name")
+```
