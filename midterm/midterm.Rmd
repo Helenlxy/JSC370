@@ -134,7 +134,8 @@ ggplot(data=admin_max_min_3_data, mapping = aes(x = End_of_Week, y = positiveInc
   geom_point() +
   geom_jitter() + 
   stat_smooth() + 
-  facet_wrap(~ name) +
+  facet_wrap(~ name, scales = "free_x") +
+  theme(axis.text.x = element_text(angle = 90)) + 
   ggtitle("Time trend of PIR for 6 states selected by number of doses administered per 100k")
 ```
 
@@ -235,7 +236,7 @@ We can fit a linear regression model to examine whether the regression between t
 library(broom)
 lm(mean_positiveIncreaseRate ~ admin_per_100k, data = tab) %>%
   tidy() %>%
-  kable(caption="Linear regression between admin_per_100k and mean PIR")
+  kable(caption="Linear regression model between admin_per_100k and mean PIR")
 ```
 
 From the summary of the model, it can be seen that the p-value of the variable `admin_per_100k` is 0.026 < 0.05, which is highly significant. This means that it's 95% statistically significant that the number of vaccination is related to the PIR. 
