@@ -5,7 +5,7 @@ navbar:
   left:
     - text: "Home"
     - href: index.html
-    - text: "Second Page!"
+    - text: "Page for lab12"
     - href: page2.html
   right:
     - icon: fa-github fa-lg
@@ -17,3 +17,4 @@ output:
     theme: cosmo
     include:
       after_body: footer.html
+    css: styles.css
