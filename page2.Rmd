@@ -11,15 +11,26 @@ output:
 knitr::opts_chunk$set(echo = FALSE, warning = FALSE, message = FALSE)
 ```
 
-# Interactive visuals
+
+This is my JSC370 Lab12 website. I will showcase a few interactive visuals here.
+
+# Step Ⅰ
+
+First I will source any necessary code, e.g. process_covid_data.R:
 
 ```{r}
 library(dplyr)
-source("process_COVID_data.R")
-head(cv_states_today)
 ```
 
-```{r}
+```{r, echo=TRUE}
+source("process_COVID_data.R")
+```
+
+# Step Ⅱ
+
+Then I will add some code to create the **plotly** figures
+
+```{r, echo=TRUE}
 library(plotly)
 p1_scatter <- cv_states_today %>% 
   plot_ly(x = ~pop_density, y = ~deathsper100k,
@@ -47,18 +58,23 @@ p2_scatter <- cv_states_today_scatter %>%
          hovermode = "compare")
 
 ```
-## Showcasing plots {.tabset}
 
-### First plot
+# Step Ⅲ
+
+Create tabs to display each figure
+
+## {.tabset}
+
+### Scatter plot with DC
 
 ```{r}
 p1_scatter
 ```
 
-### Second plot
+### Scatter plot without DC
 
 ```{r}
 p2_scatter
 ```
 
-## More information
+# Done!
