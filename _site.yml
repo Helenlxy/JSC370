@@ -19,13 +19,14 @@ navbar:
         href: page3.html
         icon: fa-chart-line
   right:
-    - icon: fa-github fa-lg
-      text: "JSC370"
-      href: https://github.com/JSC370/jsc370-2022/
+    - icon: fa-file-pdf
+      text: "PDF report"
+      href: https://github.com/Helenlxy/JSC370/raw/main/final_project.pdf
     - icon: fa-github fa-lg
       text: "Helenlxy"
-      href: https://github.com/Helenlxy/
-    - text: "JSC370 Home"
+      href: https://github.com/Helenlxy/JSC370/
+    - icon: fa-home
+      text: "JSC370 Home"
       href: https://jsc370.github.io/jsc370-2022/
 output:
   html_document:
