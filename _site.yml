@@ -3,24 +3,24 @@ output_dir: "docs"
 navbar:
   title: "JSC370 Final Project"
   left:
-    - text: "Home"
+    - text: "COVID-19 Analysis"
       href: index.html
-      icon: fa-home
-    - text: "Pages for lab12"
-      icon: fa-flask
+      icon: fa-chart-bar
+    - text: "Other"
+      icon: fa-page
       menu:
-      - text: "Visualization"
-      - text: "Lab12 - Interactive Visualizations"
-        href: page2.html
-        icon: fa-chart-bar
+      - text: "Labs"
+      - text: "Lab 12"
+        href: lab12.html
+        icon: fa-flask
       - text: '---------'
-      - text: "Empty Page"
-      - text: "Test page"
-        href: page3.html
+      - text: "Homework"
+      - text: "Homework 5"
+        href: hw5.html
         icon: fa-chart-line
   right:
     - icon: fa-file-pdf
-      text: "PDF report"
+      text: "PDF Report"
       href: https://github.com/Helenlxy/JSC370/raw/main/final_project.pdf
     - icon: fa-github fa-lg
       text: "Helenlxy"

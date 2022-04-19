@@ -29,13 +29,11 @@ library(widgetframe)
 
 # Introduction
 
-Coronavirus disease 2019 (COVID-19) is a highly contagious viral illness produced by the SARS-CoV-2 virus, which causes the severe acute respiratory syndrome. It has had a terrible effect on the globe's demography, resulting in the deaths of almost 5.3 million people around the world. It has risen to become the most serious global health problem since the 1918 influenza epidemic. COVID-19 has been a worldwide pandemic since 2019, and we have all been affected by it.
+Coronavirus disease 2019 (COVID-19) is a highly contagious viral illness produced by the SARS-CoV-2 virus, which causes the severe acute respiratory syndrome. It has had a terrible effect on the globe's demography, resulting in the deaths of almost 6.2 million people around the world. It has risen to become the most serious global health problem since the 1918 influenza epidemic. COVID-19 has been a worldwide pandemic since 2019, and we have all been affected by it.
 
-The light at the end of the tunnel is getting closer thanks to rapid developments in science and technology. Major vaccination efforts are currently underway to immunize the world's population. According to data collated by Our World in Data from health authorities, 39.7% of the world's population has received at least one dose, with nearly 2.1 billion people completely vaccinated as of today.
+The light at the end of the tunnel is getting closer thanks to rapid developments in science and technology. Major vaccination efforts are currently underway to immunize the world's population. According to data collated by [Our World in Data from health authorities](https://ourworldindata.org/covid-vaccinations), 65% of the world's population has received at least one dose, with 11.48 billion doses have been administered globally.
 
 Many analyses have been performed on all kinds of datasets for COVID-19 to find ways to fight it. For this project, we mainly analyzed COVID-19 data from [the COVID tracking project](https://covidtracking.com/). The COVID tracking project collected state-level metrics for COVID-19 cases, tests, hospitalizations, and outcomes from 2020/01/13 to 2021/03/07. The primary question we investigated with these data is whether the number and the trend of confirmed cases differ from state to state and whether it's associated with vaccination, population and distribution of age groups. 
-
-For all interactive visualizations, please refer to https://helenlxy.github.io/JSC370/.
 
 <br><br>
 
@@ -73,13 +71,8 @@ covid_data <- covid_data[, .(positiveIncrease = mean(positiveIncrease),
 
 covid_data[, positiveIncreaseRate := ifelse(!totalTestResultsIncrease, 0, positiveIncrease / totalTestResultsIncrease)]
 ```
-```{r, echo=FALSE}
-knitr::kable(summary(covid_data), caption = "A summary table for COVID-19 data")
-```
 
 After cleaning and wrangling the COVID-19 data, there are 504 records with 5 variables remaining in our data set. The mean national daily increase of confirmed cases is 2377, the mean national daily increase of PCR tests is 29741 and the mean national PIR is 12% from 2021-01-03 to 2021-03-06.
-
-<br>
 
 ### Vaccination Data
 
@@ -88,16 +81,14 @@ Besides COVID-19 cases data, we also want to see if the difference between state
 ```{r, echo=FALSE}
 vacc_data <- data.table::fread("https://data.cdc.gov/resource/unsk-b7fc.csv?date=2021-01-03T00:00:00.000")
 vacc_data <- vacc_data[, .(location, admin_per_100k)]
-knitr::kable(summary(vacc_data), caption = "A summary table for vaccination data")
 ```
 
 The mean number of doses administered per 100,000 census population in the U.S. is 1404 on 2021-01-03. 
 
-<br>
 
 ### State Data
 
-It's noticeable that there are 65 locations in the vaccination data while there are only 48 contiguous united states. This is because the `location` variable from CDC contains state, territory and federal entities. To keep only the contiguous united states, we used a [dataset](https://developers.google.com/public-data/docs/canonical/states_csv) that is used in Google DSPL. It also has the latitude and longitude of states which helps us draw maps in the following analysis. We also used [us_census_data](https://github.com/COVID19Tracking/associated-data/tree/master/us_census_data) to access the population, population density and age groups of each state. We defined two variables: `senior_rate` which is the population percentage of seniors larger than 65 years old and `children_rate` which is the population percentage of children smaller than 14 years old.
+It's noticeable that there are 65 locations in the vaccination data while there are only 48 contiguous united states. This is because the `location` variable from CDC contains state, territory and federal entities. To keep only the contiguous united states, we used a [dataset](https://developers.google.com/public-data/docs/canonical/states_csv) that is used in Google DSPL. It also has the latitude and longitude of states which helps us draw maps in the following analysis. Besides that, we used [us_census_data](https://github.com/COVID19Tracking/associated-data/tree/master/us_census_data) to access the population, population density and age groups of each state. We defined two variables: `senior_rate` which is the population percentage of seniors larger than 65 years old and `children_rate` which is the population percentage of children smaller than 14 years old.
 
 ```{r, echo=FALSE}
 library(rvest)
@@ -133,17 +124,10 @@ states <- merge(states, state_pops_readin, by="state")
 states <- merge(states, state_agegroups, by="state")
 states$state_name <- NULL
 states$geo_id <- NULL
-
-data.frame(variable = names(states),
-           type = sapply(states, typeof),
-           first_values = sapply(states, function(x) paste0(head(x),  collapse = ", ")),
-           row.names = NULL) %>% 
-  kable(caption = "A variable table for the state dataset")
 ```
 
-Our state dataset has 6 variables, including the acronym and the full name of states, the latitude and longitude and the popululation and population density.
+Our state dataset has 8 variables, including the acronym and the full name of states, the latitude and longitude, the population and population density, and the population percentage of seniors and children.
 
-<br>
 
 ### Merge Dataset
 
@@ -154,13 +138,10 @@ After acquiring, cleaning and wrangling the three data sets, we merged them into
 merged_data <- merge(covid_data, vacc_data, by.x="state", by.y = "location")
 merged_data <- merge(merged_data, states, by="state")
 
-knitr::kable(summary(merged_data), caption = "A summary table for merged dataset")
-
 ```
 
 Now the dataset for analysis contains 432 records with 13 variables.
 
-<br>
 
 ### Tools uses for data exploration
 
@@ -411,7 +392,7 @@ This model has a higher $R^2$ than the linear regression model, at 0.336. Adding
 
 Finally, the equation for the linear model can be stated as follows: $PIR = -0.53342 - 0.00004*admin\_per\_100k + 2.5543*children\_rate$.
 
-We can also train an xgboost model with 'xgboost' and then execute a grid search on eta. We additionally determine the variable significance for the xgboost model.
+We can also train an xgboost model with `xgboost` and then execute a grid search on eta. We additionally determine the variable significance for the xgboost model.
 
 ```{r, warning=FALSE, message=FALSE, echo=FALSE}
 library(tidyverse)

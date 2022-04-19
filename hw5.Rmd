@@ -1,0 +1,150 @@
+---
+title: "JSC370 Homework 5"
+author: "Xinyi Liu"
+output: 
+    html_document:
+        toc: TRUE
+        toc_float: TRUE
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = FALSE, warning = FALSE, message = FALSE)
+```
+
+# Data
+
+## COVID-19 Data
+
+[The COVID tracking project](https://covidtracking.com/) collected state-level metrics for COVID-19 cases, tests, hospitalizations, and outcomes from 2020/01/13 to 2021/03/07. There are 20780 state-level COVID-19 observations of 56 variables, including the number of positive cases, tests, deaths and individuals who are currently hospitalized with COVID-19 etc. 
+
+We focused on the `positiveIncrease` and `totalTestResultsIncrease` variable, which is the daily increase of confirmed cases and PCR tests calculated based on the previous day’s value. Following the suggestions in [this article](https://covidtracking.com/analysis-updates/how-day-of-week-effects-impact-covid-19-data), we used the 7-day average to show the general trends of data over a period of time due to the complexities of state reporting schedules and day-of-week effects. 
+
+To ensure the collected data is accurate and stabilized, we only analysed records in 2021 as the data collection at the beginning of the pandemic may contain many errors.
+
+## Vaccination Data
+
+Besides COVID-19 cases data, we also want to see if the difference between states is associated with vaccination. Therefore, we used the state-level COVID-19 Vaccinations data in the United States from [Centers for Disease Contol and Prevention](https://data.cdc.gov/Vaccinations/COVID-19-Vaccinations-in-the-United-States-Jurisdi/unsk-b7fc). CDC also provides data API so that we can acquire vaccination data on 2021-01-03 which is the beginning date in our COVID-19 data records. We focused on the `Admin_Per_100K` variable which is the total number of doses administered per 100,000 census population based on the jurisdiction where the recipient lives.
+
+## State Data
+
+It's noticeable that there are 65 locations in the vaccination data while there are only 48 contiguous united states. This is because the `location` variable from CDC contains state, territory and federal entities. To keep only the contiguous united states, we used a [state dataset](https://developers.google.com/public-data/docs/canonical/states_csv) that is used in Google DSPL and [us_census_data](https://github.com/COVID19Tracking/associated-data/tree/master/us_census_data) to access the population and population density of each state.
+
+```{r}
+library(data.table)
+library(dtplyr)
+library(dplyr)
+library(ggplot2)
+#library(mgcv)
+library(knitr)
+#library(magrittr)
+library(lubridate)
+library(tidyverse)
+library(plotly)
+library(widgetframe)
+```
+
+```{r}
+source("process_COVID_data_hw5.R")
+```
+
+<br>
+
+# The trend of daily increase of confirmed cases in each state in the U.S.
+
+## Process COVID data
+
+We mainly used 3 variables in this plot: `positiveIncrease` from the COVID tracking project which is the daily increase of confirmed cases as well as the date and state of each `positiveIncrease` record.
+
+
+## Display
+
+```{r}
+p1 <- ggplot(merged_data, aes(x=End_of_Week, y=positiveIncrease, colour = name)) +
+  geom_line()
+
+ggplotly(p1)%>%
+  layout(title = "positive case increase trend",
+         yaxis = list(title = "positive increase"),
+         xaxis = list(title = "date"),
+         hovermode = "compare")
+
+```
+
+## Interpret
+
+The PIR decreases from January to March for all states in general. But the fluctuation of the trend is not similar in each state. Some states like Texas even have an increase in the middle of February. California stands out in this plot as it has a high daily positive increase at the beginning of 2021. But the daily increase number sharply decreased to an average level of other states from January to March.
+
+
+<br>
+
+# The relationship between the vaccination status, the mean positive population rate and the population density of each state in the U.S.
+
+## Process COVID data
+
+For this visualization, I used 4 variables: `positiveIncrease` from the COVID tracking project which is the daily increase of confirmed cases, `Admin_Per_100K` from CDC which is the total number of doses administered per 100,000 census population based on the jurisdiction where the recipient lives, `population` and `pop_density` from us_census_data.
+
+I also created a variable called `positivePopRate` which is calculated by dividing the `positiveIncrease` by the `population` to calculate the daily confirmed patient rate at state-level and used the rate to reflect the severity of COVID-19 for each state. PPR(`positivePopRate`) represents the percentage of people that are confirmed to get COVID-19 in each state on each day.
+
+## Display
+
+The size of each circle reflects the population density of each state.
+
+```{r}
+tab %>%
+  #filter(name != "California") %>%
+  plot_ly(x = ~admin_per_100k, y=~mean_positivePopRate, 
+          type = 'scatter', mode = 'markers', color = ~name, 
+          size=~pop_density, sizes = c(5, 70), 
+          marker = list(sizemode="diameter", opacity=0.5),
+          hover_info = "text",
+          text = ~paste(" State:",  state, "<br>",
+                        "Doses per 100k:", admin_per_100k, "<br>",
+                        "pop density:", pop_density
+                        #sep = "<br>"
+                        ))%>%
+  layout(title = "Relationship between vaccine and mean positive population rate",
+         yaxis = list(title = "mean positivePopRate"),
+         xaxis = list(title = "the number of doses administered per 100k"),
+         hovermode = "compare")
+
+```
+
+## Interpret
+
+Although there are some states with a low number of doses per 100k and low PPR, there is hardly any state that has a high mean PPR with a high number of doses per 100k population. Considering the reason may be that the population size of these states is already quite small, if we ignore these states, we can say that a better vaccination status tends to result in a lower mean PPR.
+
+Besides that, as most big circles are above most small circles in the plot, the states with a high population density tend to have a higher mean PPR than the other states.
+
+<br>
+
+# The heatmap of the trend of positive increase rate of each state in the U.S.
+
+## Process COVID data
+
+For this visualization, I used two variables: `positiveIncrease` and `totalTestResultsIncrease` from the COVID tracking project which are the daily increase of confirmed cases and PCR tests calculated based on the previous day’s value.
+
+I also created a variable called `positiveIncreaseRate` which is calculated by dividing the `positiveIncrease` by the `totalTestResultsIncrease` (the rate will be 0 if `totalTestResultsIncrease` itself is 0) to calculate the daily confirmed case increase rate at state-level. PIR(`positiveIncreaseRate`) represents the percentage of daily PCR test results that are positive.
+
+## Display
+
+```{r}
+cv_states_mat <- merged_data %>%
+  select(name, End_of_Week, positiveIncreaseRate)
+
+PIR <- as.data.frame(pivot_wider(cv_states_mat, names_from = name, values_from = positiveIncreaseRate))
+
+PIR <- PIR %>%
+  column_to_rownames("End_of_Week") %>%
+  as.matrix()
+
+plot_ly(x=colnames(PIR), y=rownames(PIR), z=~PIR, type="heatmap")%>%
+  layout(title = "The heatmap of the trend of PIR",
+         hovermode = "compare")
+
+```
+
+## Interpret
+
+The heatmap shows that Idaho, Alabama and Iowa have a significant high PIR at the beginning of 2021. The PIR decreases from January to March for all states in general.
+
+<br>
