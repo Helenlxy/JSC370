@@ -35,6 +35,8 @@ The light at the end of the tunnel is getting closer thanks to rapid development
 
 Many analyses have been performed on all kinds of datasets for COVID-19 to find ways to fight it. For this project, we mainly analyzed COVID-19 data from [the COVID tracking project](https://covidtracking.com/). The COVID tracking project collected state-level metrics for COVID-19 cases, tests, hospitalizations, and outcomes from 2020/01/13 to 2021/03/07. The primary question we investigated with these data is whether the number and the trend of confirmed cases differ from state to state and whether it's associated with vaccination, population and distribution of age groups. 
 
+For all interactive visualizations, please refer to https://helenlxy.github.io/JSC370/.
+
 <br><br>
 
 
@@ -156,7 +158,7 @@ knitr::kable(summary(merged_data), caption = "A summary table for merged dataset
 
 ```
 
-Now the dataset for analysis contains 432 records with 9 variables.
+Now the dataset for analysis contains 432 records with 13 variables.
 
 <br>
 
@@ -405,7 +407,7 @@ tab_model(lmodel, digits = 5)
 
 The p-values of the variables `admin per 100k` and `children rate` are both less than 0.05, indicating that they are highly significant, according to the model summary. This suggests that it's 95% statistically significant that the number of vaccination and the population percentage of children is related to the PIR.
 
-This model has a higher $R2$ than the linear regression model, at 0.336. Adding independent variables to a simple linear model improves the $R2$ and consequently the model's performance.
+This model has a higher $R^2$ than the linear regression model, at 0.336. Adding independent variables to a simple linear model improves the $R^2$ and consequently the model's performance.
 
 Finally, the equation for the linear model can be stated as follows: $PIR = -0.53342 - 0.00004*admin\_per\_100k + 2.5543*children\_rate$.
 
@@ -471,4 +473,4 @@ We added the variables population, population density, and the percentage of sen
 
 To summarise, the mean PIR and PIR trend differ from state to state, and the difference is highly significant concerning vaccination. We can deduce that the COVID-19 pandemic is less severe in states with better vaccination status and more severe in places with worse vaccination status if we use PIR to reflect the severity of COVID-19 for each state. An XGBoost model incorporating vaccination, population, population density, and the population percentage of seniors and children can perform well in predicting PIR.
 
-<br><br>
+<br>
