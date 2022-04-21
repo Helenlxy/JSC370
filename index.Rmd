@@ -153,17 +153,24 @@ The COVID-19 and vaccination datasets were imported using `data.table` while the
 
 ## Trend of PIR
 
+Recall that PIR (`positiveIncreaseRate`) is calculated by dividing the the daily increase of confirmed cases by the daily increase of PCR tests, and PIR represents the daily confirmed case increase rate at state-level.
+
 We first want to see whether the trend of PIR differs from state to state. We created two interactive visualizations to show the trend of PIR in each state in the U.S.
 
 ```{r}
-p1 <- ggplot(merged_data, aes(x=End_of_Week, y=positiveIncreaseRate, colour = name)) +
+
+p1 <- ggplot(merged_data, aes(x=End_of_Week, y=positiveIncreaseRate, colour = name, group=1, text = paste(
+  " Date: ", End_of_Week, "<br>",
+  "PIR: ", round(positiveIncreaseRate, digits = 3), "<br>",
+  "State: ", name))) +
   geom_line()
 
-ggplotly(p1)%>%
+ggplotly(p1, tooltip="text")%>%
   layout(title = "PIR trend",
          yaxis = list(title = "positive increase rate"),
          xaxis = list(title = "date"),
-         hovermode = "compare")
+         hovermode = "compare"
+         )
 
 ```
 
@@ -178,11 +185,13 @@ PIR <- as.data.frame(pivot_wider(cv_states_mat, names_from = name, values_from =
 
 PIR <- PIR %>%
   column_to_rownames("End_of_Week") %>%
-  as.matrix()
+  as.matrix %>%
+  round(digits = 3)
 
-plot_ly(x=colnames(PIR), y=rownames(PIR), z=~PIR, type="heatmap")%>%
-  layout(title = "The heatmap of the trend of PIR",
-         hovermode = "compare")
+
+
+plot_ly(x=colnames(PIR), y=rownames(PIR), z=~PIR, type="heatmap", hover_info = "y")%>%
+  layout(title = "The heatmap of the trend of PIR")
 
 ```
 
@@ -330,7 +339,7 @@ p1 <- tab %>%
           hover_info = "text",
           text = ~paste(" State:",  name, "<br>",
                         "Doses per 100k:", admin_per_100k, "<br>",
-                        "pop density:", pop_density
+                        "pop density:", round(pop_density, digits = 3)
                         #sep = "<br>"
                         ))%>%
   layout(title = "Relationship between vaccine and mean PIR, cirle size = pop density",
@@ -347,7 +356,7 @@ p2 <- tab %>%
           hover_info = "text",
           text = ~paste(" State:",  name, "<br>",
                         "Doses per 100k:", admin_per_100k, "<br>",
-                        "children rate:", children_rate
+                        "children rate:", round(children_rate, digits = 3)
                         #sep = "<br>"
                         ))%>%
   layout(title = "Relationship between vaccine and mean PIR, cirle size = children rate",
