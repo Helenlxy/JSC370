@@ -149,7 +149,7 @@ The COVID-19 and vaccination datasets were imported using `data.table` while the
 
 <br><br>
 
-# Preliminary Results
+# Results
 
 ## Trend of PIR
 
