@@ -339,6 +339,7 @@ p1 <- tab %>%
           hover_info = "text",
           text = ~paste(" State:",  name, "<br>",
                         "Doses per 100k:", admin_per_100k, "<br>",
+                        "PIR:", round(mean_positiveIncreaseRate, digits = 3), "<br>",
                         "pop density:", round(pop_density, digits = 3)
                         #sep = "<br>"
                         ))%>%
@@ -356,6 +357,7 @@ p2 <- tab %>%
           hover_info = "text",
           text = ~paste(" State:",  name, "<br>",
                         "Doses per 100k:", admin_per_100k, "<br>",
+                        "PIR:", round(mean_positiveIncreaseRate, digits = 3), "<br>",
                         "children rate:", round(children_rate, digits = 3)
                         #sep = "<br>"
                         ))%>%
